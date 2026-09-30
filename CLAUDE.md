@@ -26,6 +26,7 @@ Prefix every shell command with `rtk`, including each command in an `&&` chain �
 - `test/helpers.ts`: `parse()` with the invariant checks, summaries for assertions, and `lint()` running preset-ja-technical-writing through `@textlint/kernel`.
 - `test/*.test.ts`: one file per area of the specification (processor, options, document, blocks, inlines, math, comments, rules). `test/fixtures/`: LaTeX inputs.
 - `.github/workflows/ci.yml`: runs `mise run check` on pull requests and on manual dispatch.
+- `.github/workflows/release.yml`: on a `v*` tag push, checks the tag against `package.json`, runs `mise run check`, publishes to npm with Trusted Publishing (OIDC, no token), and creates a GitHub Release. The file name is registered on npmjs.com, so do not rename it. The one-time setup is in README.md ("npmに初めて公開するための下準備").
 
 # Artifact Cleanup
 
