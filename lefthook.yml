@@ -7,6 +7,10 @@ pre-commit:
     - rebase
 
   commands:
+    typecheck:
+      glob: "*.ts"
+      run: pnpm run typecheck
+
     textlint:
       glob: "*.md"
       run: pnpm textlint {staged_files}
