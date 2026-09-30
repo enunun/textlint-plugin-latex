@@ -1,0 +1,53 @@
+# v1.2.3のようなタグをpushすると，検査のうえでnpmに公開し，GitHubのReleaseを作る．
+# npmへはTrusted Publishing(OIDC)で公開するので，トークンは使わない．
+# npmjs.comのTrusted Publisherには，このファイル名(release.yml)を登録する．
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # GitHubのReleaseを作る
+      id-token: write # npmのTrusted Publishing
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install tools from mise.toml
+        uses: jdx/mise-action@v5
+
+      - name: Check that the tag matches the version in package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "タグ${GITHUB_REF_NAME}が，package.jsonの版v${version}と一致しない．" >&2
+            exit 1
+          fi
+
+      - name: Check
+        run: mise run check
+
+      # 1.0.0-beta.1のようなプレリリース版は，npmのlatestではなくnextとして公開する．
+      # 最初の版のように手元から公開済みの版は，公開を飛ばしてReleaseだけを作る．
+      - name: Publish to npm
+        run: |
+          package="$(node -p "require('./package.json').name")@${GITHUB_REF_NAME#v}"
+          if npm view "${package}" version > /dev/null 2>&1; then
+            echo "${package}は公開済みなので，npmへの公開を飛ばす．"
+          elif [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            npm publish --tag next
+          else
+            npm publish
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

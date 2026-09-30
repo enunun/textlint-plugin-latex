@@ -13,13 +13,17 @@ LaTeXの構文解析には[latex-utensils](https://github.com/tamuratak/latex-ut
 
 ## インストール
 
-npmには公開していない．GitHubのリポジトリを指定してインストールする．
+npmから，textlintとあわせてインストールする．
 
 ``` sh
-pnpm add -D textlint github:enunun/textlint-plugin-latex
+pnpm add -D textlint @enunun/textlint-plugin-latex
 ```
 
-版を固定する場合は，`github:enunun/textlint-plugin-latex#v0.1.0`のようにタグを付ける．
+npmに公開する前の版は，GitHubのリポジトリとタグを指定してインストールできる．
+
+``` sh
+pnpm add -D textlint github:enunun/textlint-plugin-latex#v0.1.0
+```
 
 ## 設定
 
@@ -156,6 +160,68 @@ test/
   rules.test.ts       preset-ja-technical-writingを使った校正結果．
   fixtures/           テスト用のLaTeX文書．
 ```
+
+### リリース
+
+`v1.2.3`のようなタグをpushすると，GitHub Actions(`.github/workflows/release.yml`)が次の順に処理する．
+
+1. タグがpackage.jsonの`version`と一致することを確かめる．
+2. `mise run check`で，リント，単体テスト，ビルドを行う．
+3. npmに公開する．`1.0.0-beta.1`のようなプレリリース版は，`latest`ではなく`next`として公開する．
+   その版がすでに公開済みなら，公開を飛ばす．
+4. GitHubのReleaseを作り，前のタグからの変更点を自動で書く．
+
+npmへはTrusted Publishing(GitHub ActionsのOIDC)で公開するので，npmのトークンをリポジトリに登録する必要はない．
+公開した版には，どのコミットとワークフローから作られたかを示す来歴(provenance)が自動で付く．
+
+リリースの手順は次のとおり．
+
+1. package.jsonの`version`を上げ，mainブランチにコミットする(`npm version patch --no-git-tag-version`など)．
+2. その版のタグを付けてpushする．
+
+   ``` sh
+   git tag v0.1.1
+   git push origin v0.1.1
+   ```
+
+### npmに初めて公開するための下準備
+
+npmは，すでに公開されているパッケージにしかTrusted Publishingを設定できない．
+そのため，最初の版だけは手元から公開し，その後でTrusted Publishingを設定する．
+次の作業は一度だけ行えばよい．
+
+1. [npmjs.com](https://www.npmjs.com/signup)で，ユーザー名`enunun`のアカウントを作る．
+   パッケージ名の`@enunun`はユーザー名と同じスコープなので，組織(organization)は作らなくてよい．
+2. アカウントの設定で，2要素認証を有効にする．
+3. 手元でリント，単体テスト，ビルドが通ることを確かめ，公開される内容を見る．
+
+   ``` sh
+   mise run check
+   npm pack --dry-run
+   ```
+
+   公開されるのは`lib/`，`README.md`，`LICENSE`，`package.json`だけである．
+4. npmにログインし，最初の版を公開する．
+   スコープ付きのパッケージは既定では非公開になるが，package.jsonの`publishConfig`で公開(`public`)にしてある．
+
+   ``` sh
+   npm login
+   npm publish
+   ```
+
+5. npmjs.comのパッケージの設定(Settings)で，Trusted PublisherにGitHub Actionsを追加する．
+
+   | 項目 | 値 |
+   | --- | --- |
+   | Organization or user | `enunun` |
+   | Repository | `textlint-plugin-latex` |
+   | Workflow filename | `release.yml` |
+   | Environment name | 空欄 |
+
+6. 同じ設定画面の公開方法(Publishing access)で，トークンによる公開を禁止する設定(disallow tokens)を選ぶ．
+   以後は，GitHub Actionsからしか公開できなくなる．
+7. 最初の版のタグをpushする(`git tag v0.1.0`，`git push origin v0.1.0`)．
+   この版は公開済みなので，ワークフローはnpmへの公開を飛ばし，GitHubのReleaseだけを作る．
 
 ### Claude Codeで開発する場合
 
