@@ -80,8 +80,9 @@ class Converter {
 	}
 
 	convert(): TxtDocumentNode {
-		const ast = latexParser.parse(this.text, { enableComment: true });
-		this.comments = ast.comment ?? [];
+		const ast = this.parse();
+		// the parser always returns the comments when `enableComment` is set
+		this.comments = ast.comment!;
 		const documentEnv = ast.content.find(
 			(node): node is LatexParser.Environment => node.kind === "env" && node.name === "document",
 		);
@@ -93,6 +94,19 @@ class Converter {
 			}
 		}
 		return root as unknown as TxtDocumentNode;
+	}
+
+	/** Parses the document, reporting a syntax error with its position in the source. */
+	private parse(): LatexParser.LatexAst {
+		try {
+			return latexParser.parse(this.text, { enableComment: true });
+		} catch (error) {
+			if (latexParser.isSyntaxError(error)) {
+				const { line, column } = error.location.start;
+				throw new Error(`Cannot parse the LaTeX document at line ${line}, column ${column}: ${error.message}`, { cause: error });
+			}
+			throw error;
+		}
 	}
 
 	// ---------------------------------------------------------------- blocks
@@ -286,7 +300,7 @@ class Converter {
 	 */
 	private strs(start: number, end: number): AstNode[] {
 		const out: AstNode[] = [];
-		const pattern = /[ \t]*\n[ \t]*/g;
+		const pattern = /[ \t]*\r?\n[ \t]*/g;
 		const raw = this.text.slice(start, end);
 		let lineStart = 0;
 		for (const match of raw.matchAll(pattern)) {
@@ -339,7 +353,7 @@ class Converter {
 			case "command":
 				return this.command(node);
 			default:
-				// superscripts, alignment tabs, \def, and other non-prose tokens
+				// the comment environment, superscripts, alignment tabs, \def, and other non-prose tokens
 				return "location" in node && node.location ? [this.invisible({ location: node.location })] : [];
 		}
 	}
@@ -396,8 +410,8 @@ class Converter {
 	private commentNode(comment: LComment): AstNode {
 		const start = comment.location.start.offset;
 		// the location of a comment includes the line break after it
-		const end = this.text[comment.location.end.offset - 1] === "\n" ? comment.location.end.offset - 1 : comment.location.end.offset;
-		return { ...this.node("Comment", start, end), value: comment.content };
+		const end = start + this.text.slice(start, comment.location.end.offset).replace(/\r?\n$/, "").length;
+		return { ...this.node("Comment", start, end), value: comment.content.replace(/\r$/, "") };
 	}
 
 	private contains(node: { location: LatexParser.Location }, comment: LComment): boolean {
@@ -423,18 +437,19 @@ class Converter {
 		};
 	}
 
+	/** Finds the line of `offset` by binary search over the line starts; every index it reads is in range. */
 	private position(offset: number): { line: number; column: number } {
 		let low = 0;
 		let high = this.lineStarts.length - 1;
 		while (low < high) {
 			const mid = (low + high + 1) >> 1;
-			if ((this.lineStarts[mid] ?? 0) <= offset) {
+			if (this.lineStarts[mid]! <= offset) {
 				low = mid;
 			} else {
 				high = mid - 1;
 			}
 		}
-		return { line: low + 1, column: offset - (this.lineStarts[low] ?? 0) };
+		return { line: low + 1, column: offset - this.lineStarts[low]! };
 	}
 }
 
@@ -500,6 +515,13 @@ function mathValue(node: LatexParser.InlineMath): string {
 						visit([child.arg]);
 					}
 					break;
+				case "math.matching_delimiters":
+				case "math.math_delimiters":
+					// \left( ... \right) and \bigl( ... \bigr): each delimiter is one symbol
+					value += "x";
+					visit(child.content);
+					value += "x";
+					break;
 				default:
 					if ("content" in child && Array.isArray(child.content)) {
 						visit(child.content);
@@ -511,12 +533,15 @@ function mathValue(node: LatexParser.InlineMath): string {
 	return value === "" ? "x" : value;
 }
 
-/** Inserts `child` into the deepest node whose range contains it, keeping children ordered by position. */
+/**
+ * Inserts a block-level `child` into the deepest list or list item containing it, keeping children ordered by position.
+ * It never goes inside a paragraph, whose children must cover it without overlapping.
+ */
 function insertByRange(parent: AstNode, child: AstNode): void {
 	const start = child.range[0];
 	const children = (parent.children ??= []);
 	for (const node of children) {
-		if (node.children && node.range[0] <= start && start < node.range[1]) {
+		if ((node.type === "List" || node.type === "ListItem") && node.range[0] <= start && start < node.range[1]) {
 			insertByRange(node, child);
 			return;
 		}

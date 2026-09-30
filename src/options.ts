@@ -30,7 +30,10 @@ export interface LatexPluginOptions {
 	mathEnvironments?: string[];
 	/** Environments whose body is not prose, such as `tabular`. They are treated like display math. */
 	opaqueEnvironments?: string[];
-	/** Environments that are skipped entirely, such as `comment`. */
+	/**
+	 * Environments that are skipped entirely: neither checked nor part of the sentence around them.
+	 * The `comment` environment is always skipped.
+	 */
 	ignoreEnvironments?: string[];
 	/** Environments whose body is split into items by `\item`. */
 	listEnvironments?: string[];
@@ -143,7 +146,6 @@ const defaults = {
 		"Huge",
 	],
 	blockCommands: [
-		"par",
 		"item",
 		"maketitle",
 		"tableofcontents",
@@ -165,10 +167,10 @@ const defaults = {
 		"printindex",
 		"includegraphics",
 	],
-	mathEnvironments: [],
+	// the parser recognizes equation, align, gather, multline, and flalign, but not alignat
+	mathEnvironments: ["alignat"],
 	opaqueEnvironments: [
 		"tabular",
-		"tabular*",
 		"tabularx",
 		"array",
 		"picture",
@@ -179,11 +181,8 @@ const defaults = {
 		"prooftree",
 		"forest",
 		"algorithmic",
-		"lstlisting",
-		"minted",
-		"verbatim",
 	],
-	ignoreEnvironments: ["comment"],
+	ignoreEnvironments: [],
 	listEnvironments: ["itemize", "enumerate", "description"],
 	commentDirectives: ["textlint-disable", "textlint-enable"],
 } satisfies Record<string, string[]>;

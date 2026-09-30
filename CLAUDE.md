@@ -11,10 +11,11 @@ Prefix every shell command with `rtk`, including each command in an `&&` chain �
 - `git commit` runs the lefthook hooks. If they fail, fix the reported issues. Do not use `--no-verify`.
 
 - Run `mise run check` after making changes.
+- Quality is assured by unit tests. Every behavior described in README.md ("LaTeXの要素の扱い" and "オプション") has a test, and every entry of the built-in lists in `src/options.ts` is tested by a table-driven test. When you add or change a behavior, update README.md and add or change the test in the same commit.
+- `pnpm test` (`mise run test`) fails unless line, branch, and function coverage of `src/` are all 100%. Do not lower the thresholds or add coverage-ignore comments; test the branch, or remove it if it is unreachable.
 - Tests run on Node's built-in test runner with native TypeScript support (`node --test`). Import local modules with the `.ts` extension; `tsc` rewrites them to `.js` in `lib/`.
-- Keep the AST invariants covered by `test/convert.test.ts`: every node's `raw` equals the source slice of its `range`, and the children of a `Paragraph` cover it without gaps (sentence-splitter stops at the first uncovered character).
-- `Str` nodes must keep `value` the same length as `raw`, since rules map positions inside a `Str` by index.
-- When changing how an element is converted, check the effect on real rules in `test/rules.test.ts`, not only the AST shape.
+- Parse LaTeX in tests through `parse()` in `test/helpers.ts`. It also asserts the AST invariants: `raw` equals the source slice of `range` and `loc` matches it, children lie inside their parent in order, the children of a `Paragraph` cover it without gaps (sentence-splitter stops at the first uncovered character), and a `Str` keeps `value` the same length as `raw` (rules map positions inside a `Str` by index).
+- When changing how an element is converted, also check the effect on real rules in `test/rules.test.ts`, not only the AST shape.
 
 ## Code map
 
@@ -22,7 +23,8 @@ Prefix every shell command with `rtk`, including each command in an `&&` chain �
 - `src/LatexProcessor.ts`: textlint plugin processor (extensions, preProcess/postProcess).
 - `src/convert.ts`: LaTeX AST (latex-utensils) → TxtAST conversion.
 - `src/options.ts`: plugin options and the built-in lists of commands and environments.
-- `test/convert.test.ts`: AST shape and invariants. `test/rules.test.ts`: results with preset-ja-technical-writing through `@textlint/kernel`. `test/fixtures/`: LaTeX inputs.
+- `test/helpers.ts`: `parse()` with the invariant checks, summaries for assertions, and `lint()` running preset-ja-technical-writing through `@textlint/kernel`.
+- `test/*.test.ts`: one file per area of the specification (processor, options, document, blocks, inlines, math, comments, rules). `test/fixtures/`: LaTeX inputs.
 - `.github/workflows/ci.yml`: runs `mise run check` on pull requests and on manual dispatch.
 
 # Artifact Cleanup

@@ -37,4 +37,28 @@ describe("with preset-ja-technical-writing", () => {
 		const messages = await lint("% textlint-disable\nここは文である。\n% textlint-enable\n\nここは文である。\n");
 		assert.deepEqual(summary(messages), ["ja-no-mixed-period@5:8"]);
 	});
+
+	test("a textlint-disable comment inside math suppresses errors after it", async () => {
+		const messages = await lint("\\begin{equation}a % textlint-disable\n\\end{equation}\nここは文である。\n% textlint-enable\n");
+		assert.deepEqual(summary(messages), []);
+	});
+
+	test("a caption needs no period", async () => {
+		assert.deepEqual(summary(await lint("\\begin{figure}\n\t\\caption{群の例}\n\\end{figure}\n")), []);
+	});
+
+	test("a table inside a sentence does not split it", async () => {
+		assert.deepEqual(summary(await lint("次の表\\begin{tabular}{c}a\\end{tabular}を見よ．\n")), []);
+	});
+
+	test("inline math counts about as long as it is printed", async () => {
+		const formula = Array.from({ length: 10 }, () => "a \\longrightarrow").join(" ");
+		assert.ok(formula.length > 100);
+		assert.deepEqual(summary(await lint(`写像\\(${formula}\\)を考える．\n`)), []);
+	});
+
+	test("a long sentence is still reported", async () => {
+		const messages = await lint(`${"長い文".repeat(40)}である．\n`);
+		assert.deepEqual(summary(messages), ["sentence-length@1:1"]);
+	});
 });
