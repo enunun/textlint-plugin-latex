@@ -1,0 +1,41 @@
+\documentclass{ltjsbook}
+\usepackage{amsthm}
+% 本文より前の設定は検査しない．
+\newtheorem{Def}{定義}
+
+\begin{document}
+
+\chapter{群}\label{chap:group}
+
+\section{定義}
+
+\begin{Def}[群]\label{Def:group}
+	集合\(G\)と写像\(\cdot \colon G \times G \to G\)の組\(\paren{G, \cdot}\)が%
+	\term[ぐん]{群}であるとは，以下の条件をすべて満たすことをいう：
+	\begin{enumerate}
+		\item 任意の\(a, b, c \in G\)に対し\(\paren{a \cdot b} \cdot c = a \cdot \paren{b \cdot c}\)である．
+		\item ある\(e \in G\)が存在し，任意の\(a \in G\)に対し\(a \cdot e = e \cdot a = a\)である．
+	\end{enumerate}
+\end{Def}
+
+\begin{proof}
+	\(b, b'\)がともに\(a\)の逆元であるとすると，
+	\begin{equation*}
+		b = b \cdot \paren{a \cdot b'} = \paren{b \cdot a} \cdot b' = b'
+	\end{equation*}
+	である．
+	したがって逆元は一意である\footnote{単位元の一意性も同様に示せる．}．
+\end{proof}
+
+\begin{figure}
+	\centering
+	\includegraphics{group.pdf}
+	\caption{群の例}
+	\label{fig:group}
+\end{figure}
+
+\begin{verbatim}
+x = 1
+\end{verbatim}
+
+\end{document}

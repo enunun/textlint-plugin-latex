@@ -1,6 +1,6 @@
-# PROJECT_NAME
+# @enunun/textlint-plugin-latex
 
-TODO: Describe the project overview.
+A textlint plugin that converts LaTeX documents into textlint's AST (TxtAST), built on latex-utensils. It is designed for math-heavy Japanese writing: display math stays inside the surrounding sentence, lists become List/ListItem/Paragraph, and theorem-like environments are transparent. Written in TypeScript (ESM); `lib/` is the build output.
 
 # RTK (Rust Token Killer)
 
@@ -8,15 +8,22 @@ Prefix every shell command with `rtk`, including each command in an `&&` chain â
 
 ## Working conventions
 
-TODO: Describe the development conventions for this project (branching strategy, commit granularity, whether reviews are required, etc.).
-
 - `git commit` runs the lefthook hooks. If they fail, fix the reported issues. Do not use `--no-verify`.
 
 - Run `mise run check` after making changes.
+- Tests run on Node's built-in test runner with native TypeScript support (`node --test`). Import local modules with the `.ts` extension; `tsc` rewrites them to `.js` in `lib/`.
+- Keep the AST invariants covered by `test/convert.test.ts`: every node's `raw` equals the source slice of its `range`, and the children of a `Paragraph` cover it without gaps (sentence-splitter stops at the first uncovered character).
+- `Str` nodes must keep `value` the same length as `raw`, since rules map positions inside a `Str` by index.
+- When changing how an element is converted, check the effect on real rules in `test/rules.test.ts`, not only the AST shape.
 
 ## Code map
 
-TODO: Describe the main directory structure and the purpose of each directory.
+- `src/index.ts`: plugin entry point (`{ Processor }`).
+- `src/LatexProcessor.ts`: textlint plugin processor (extensions, preProcess/postProcess).
+- `src/convert.ts`: LaTeX AST (latex-utensils) â†’ TxtAST conversion.
+- `src/options.ts`: plugin options and the built-in lists of commands and environments.
+- `test/convert.test.ts`: AST shape and invariants. `test/rules.test.ts`: results with preset-ja-technical-writing through `@textlint/kernel`. `test/fixtures/`: LaTeX inputs.
+- `.github/workflows/ci.yml`: runs `mise run check` on pull requests and on manual dispatch.
 
 # Artifact Cleanup
 

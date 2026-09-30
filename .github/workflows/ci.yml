@@ -1,0 +1,22 @@
+# 開発用コンテナと同じ版のツールで，リント，単体テスト，ビルドを行う．
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install tools from mise.toml
+        uses: jdx/mise-action@v5
+
+      - name: Check
+        run: mise run check
