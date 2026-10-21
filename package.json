@@ -1,6 +1,6 @@
 {
   "name": "@enunun/textlint-plugin-latex",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "textlint plugin for LaTeX documents, with support for math-heavy writing such as display math inside sentences and theorem environments",
   "keywords": [
     "textlint",
