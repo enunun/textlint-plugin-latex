@@ -35,15 +35,23 @@ jobs:
 
       # 1.0.0-beta.1のようなプレリリース版は，npmのlatestではなくnextとして公開する．
       # 最初の版のように手元から公開済みの版は，公開を飛ばしてReleaseだけを作る．
+      # 公開に失敗したら，npmのログからTrusted Publishing(OIDC)の記録を表示する．
       - name: Publish to npm
         run: |
-          package="$(node -p "require('./package.json').name")@${GITHUB_REF_NAME#v}"
-          if npm view "${package}" version > /dev/null 2>&1; then
+          version="${GITHUB_REF_NAME#v}"
+          package="$(node -p "require('./package.json').name")@${version}"
+          echo "npm $(npm --version)"
+          if [ "$(npm view "${package}" version 2> /dev/null)" = "${version}" ]; then
             echo "${package}は公開済みなので，npmへの公開を飛ばす．"
-          elif [[ "${GITHUB_REF_NAME}" == *-* ]]; then
-            npm publish --tag next
-          else
-            npm publish
+            exit 0
+          fi
+          tag=latest
+          if [[ "${version}" == *-* ]]; then
+            tag=next
+          fi
+          if ! npm publish --tag "${tag}"; then
+            grep -ih "oidc" ~/.npm/_logs/*-debug-*.log || true
+            exit 1
           fi
 
       - name: Create GitHub Release

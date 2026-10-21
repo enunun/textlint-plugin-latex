@@ -217,11 +217,27 @@ npmは，すでに公開されているパッケージにしかTrusted Publishin
    | Repository | `textlint-plugin-latex` |
    | Workflow filename | `release.yml` |
    | Environment name | 空欄 |
+   | Allowed actions | `npm publish`(直接の公開)を許可する |
 
+   どの項目も大文字と小文字を区別し，一字一句同じでなければならない．
+   npmは保存時に設定を検証しないので，誤りは公開のときに初めて分かる．
+   一度保存した設定は編集できないので，誤りがあれば削除して作り直す．
 6. 同じ設定画面の公開方法(Publishing access)で，トークンによる公開を禁止する設定(disallow tokens)を選ぶ．
    以後は，GitHub Actionsからしか公開できなくなる．
 7. 最初の版のタグをpushする(`git tag v0.1.0`，`git push origin v0.1.0`)．
    この版は公開済みなので，ワークフローはnpmへの公開を飛ばし，GitHubのReleaseだけを作る．
+
+### 公開に失敗したとき
+
+GitHub Actionsで`npm error code ENEEDAUTH`(ログインが必要)と表示されたら，Trusted Publishingによる認証に失敗している．
+npmは認証に失敗した理由を表に出さず，ログインしていない状態として扱う．
+ワークフローは失敗したときに，npmのログからTrusted Publishingの記録(`oidc`を含む行)を表示する．
+次の点を確かめる．
+
+- npmjs.comのTrusted Publisherの各項目が，上の表と一字一句同じである．
+- Allowed actionsで，`npm publish`による直接の公開を許可している．
+  許可していないと，`npm stage publish`による仮公開しかできない．
+- Trusted Publisherを登録してから2日以内に一度も使わないと，その設定は失効する．失効したら作り直す．
 
 ### Claude Codeで開発する場合
 
